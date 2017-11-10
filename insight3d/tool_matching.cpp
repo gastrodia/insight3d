@@ -23,7 +23,8 @@
 */
 
 #include "tool_matching.h"
-
+#include <opencv2/opencv.hpp>
+using namespace cv;
 // parameter ids
 const size_t 
 	MATCHING_METHOD = 0, 

@@ -23,7 +23,7 @@
 */
 
 #include "tool_calibration.h"
-
+#include "opencv2/opencv.hpp"
 // tool's state structure
 struct Tool_Calibration
 {

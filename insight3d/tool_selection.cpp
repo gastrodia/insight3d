@@ -86,321 +86,321 @@ void tool_selection_key()
 {
 	if (ui_state.key_state[SDLK_SPACE] && INDEX_IS_SET(ui_state.current_shot))
 	{
-		// vertices visible on current shot 
-		bool * visible_vertices = ALLOC(bool, vertices.count);
-		memset(visible_vertices, 0, sizeof(bool) * vertices.count);
-		size_t * visible_vertices_point_id = ALLOC(size_t, vertices.count);
-		memset(visible_vertices_point_id, 0, sizeof(size_t) * vertices.count);
-		for ALL(shots.data[ui_state.current_shot].points, i) 
-		{
-			visible_vertices[shots.data[ui_state.current_shot].points.data[i].vertex] = true;
-			visible_vertices_point_id[shots.data[ui_state.current_shot].points.data[i].vertex] = i;
-		}
+		// // vertices visible on current shot 
+		// bool * visible_vertices = ALLOC(bool, vertices.count);
+		// memset(visible_vertices, 0, sizeof(bool) * vertices.count);
+		// size_t * visible_vertices_point_id = ALLOC(size_t, vertices.count);
+		// memset(visible_vertices_point_id, 0, sizeof(size_t) * vertices.count);
+		// for ALL(shots.data[ui_state.current_shot].points, i) 
+		// {
+		// 	visible_vertices[shots.data[ui_state.current_shot].points.data[i].vertex] = true;
+		// 	visible_vertices_point_id[shots.data[ui_state.current_shot].points.data[i].vertex] = i;
+		// }
 
-		// we'll go through polygons and pick those which are not entirely visible on current shot 
-		// and best suited for registration 
-		size_t best_shot_id = 0, best_polygon_id = 0, best_points_count = 0;
-		bool best_found = false;
-		size_t * count = ALLOC(size_t, shots.count);
-		for ALL(polygons, i)
-		{
-			const Polygon_3d * const polygon = polygons.data + i; 
-			memset(count, 0, sizeof(size_t) * shots.count);
-			size_t max = 0, max_shot_id = 0;
+		// // we'll go through polygons and pick those which are not entirely visible on current shot 
+		// // and best suited for registration 
+		// size_t best_shot_id = 0, best_polygon_id = 0, best_points_count = 0;
+		// bool best_found = false;
+		// size_t * count = ALLOC(size_t, shots.count);
+		// for ALL(polygons, i)
+		// {
+		// 	const Polygon_3d * const polygon = polygons.data + i; 
+		// 	memset(count, 0, sizeof(size_t) * shots.count);
+		// 	size_t max = 0, max_shot_id = 0;
 
-			for ALL(polygon->vertices, j) 
-			{
-				const size_t vertex_id = polygon->vertices.data[j].value; 
+		// 	for ALL(polygon->vertices, j) 
+		// 	{
+		// 		const size_t vertex_id = polygon->vertices.data[j].value; 
 
-				for ALL(vertices_incidence.data[vertex_id].shot_point_ids, k)
-				{
-					const size_t shot_id = vertices_incidence.data[vertex_id].shot_point_ids.data[k].primary;
-					count[shot_id]++;
-					if (count[shot_id] > max) 
-					{
-						max = count[shot_id];
-						max_shot_id = shot_id;
-					}
-				}
-			}
+		// 		for ALL(vertices_incidence.data[vertex_id].shot_point_ids, k)
+		// 		{
+		// 			const size_t shot_id = vertices_incidence.data[vertex_id].shot_point_ids.data[k].primary;
+		// 			count[shot_id]++;
+		// 			if (count[shot_id] > max) 
+		// 			{
+		// 				max = count[shot_id];
+		// 				max_shot_id = shot_id;
+		// 			}
+		// 		}
+		// 	}
 		
-			// if this polygon is not entirely visible on current shot 
-			if (count[ui_state.current_shot] < max) 
-			{
-				// then it might be good candidate, count the features in it
-				for (size_t k = 0; k < shots.count; k++) 
-				{
-					if (count[k] == max)
-					{
-						// export it 
-						CvMat * polygon_mat = publish_polygon(k, i);
+		// 	// if this polygon is not entirely visible on current shot 
+		// 	if (count[ui_state.current_shot] < max) 
+		// 	{
+		// 		// then it might be good candidate, count the features in it
+		// 		for (size_t k = 0; k < shots.count; k++) 
+		// 		{
+		// 			if (count[k] == max)
+		// 			{
+		// 				// export it 
+		// 				CvMat * polygon_mat = publish_polygon(k, i);
 
-						if (polygon_mat)
-						{
-							ASSERT_IS_SET(shots, k);
+		// 				if (polygon_mat)
+		// 				{
+		// 					ASSERT_IS_SET(shots, k);
 
-							size_t points_count = 0;
-							for ALL(shots.data[k].points, j)
-							{
-								Point * point = shots.data[k].points.data + j;
-								if (!visible_vertices[point->vertex]) continue;
-								if (opencv_pip(point->x, point->y, polygon_mat))
-								{
-									points_count++;
-								}
-							}
+		// 					size_t points_count = 0;
+		// 					for ALL(shots.data[k].points, j)
+		// 					{
+		// 						Point * point = shots.data[k].points.data + j;
+		// 						if (!visible_vertices[point->vertex]) continue;
+		// 						if (opencv_pip(point->x, point->y, polygon_mat))
+		// 						{
+		// 							points_count++;
+		// 						}
+		// 					}
 
-							if (points_count > 0 && (points_count > best_points_count || !best_found))
-							{
-								best_found = true;
-								best_points_count = points_count; 
-								best_polygon_id = i;
-								best_shot_id = k;
-							}
+		// 					if (points_count > 0 && (points_count > best_points_count || !best_found))
+		// 					{
+		// 						best_found = true;
+		// 						best_points_count = points_count; 
+		// 						best_polygon_id = i;
+		// 						best_shot_id = k;
+		// 					}
 
-							ATOMIC_RW(opencv, cvReleaseMat(&polygon_mat); );
-						}
-					}
-				}
-			}
-		}
+		// 					ATOMIC_RW(opencv, cvReleaseMat(&polygon_mat); );
+		// 				}
+		// 			}
+		// 		}
+		// 	}
+		// }
 
-		FREE(count);
+		// FREE(count);
 
-		if (best_found) 
-		{
-			// * estimate the polygon *
-			size_t 
-				* points1_id = ALLOC(size_t, shots.data[ui_state.current_shot].points.count + 128),
-				* points2_id = ALLOC(size_t, shots.data[ui_state.current_shot].points.count + 128);
+		// if (best_found) 
+		// {
+		// 	// * estimate the polygon *
+		// 	size_t 
+		// 		* points1_id = ALLOC(size_t, shots.data[ui_state.current_shot].points.count + 128),
+		// 		* points2_id = ALLOC(size_t, shots.data[ui_state.current_shot].points.count + 128);
 
-			ASSERT_IS_SET(shots, best_shot_id);
+		// 	ASSERT_IS_SET(shots, best_shot_id);
 
-			// vertices of this polygon on both shots 
-			bool * polygon_vertices = ALLOC(bool, vertices.count);
-			memset(polygon_vertices, 0, sizeof(bool) * vertices.count);
-			size_t count_manually_entered = 0;
-			for ALL(polygons.data[best_polygon_id].vertices, i) 
-			{
-				const size_t vertex_id = polygons.data[best_polygon_id].vertices.data[i].value;
-				polygon_vertices[vertex_id] = true;
+		// 	// vertices of this polygon on both shots 
+		// 	bool * polygon_vertices = ALLOC(bool, vertices.count);
+		// 	memset(polygon_vertices, 0, sizeof(bool) * vertices.count);
+		// 	size_t count_manually_entered = 0;
+		// 	for ALL(polygons.data[best_polygon_id].vertices, i) 
+		// 	{
+		// 		const size_t vertex_id = polygons.data[best_polygon_id].vertices.data[i].value;
+		// 		polygon_vertices[vertex_id] = true;
 
-				bool point_found = false; 
-				size_t point_iter = 0; 
-				LAMBDA_FIND(vertices_incidence.data[vertex_id].shot_point_ids, point_iter, point_found, 
-					vertices_incidence.data[vertex_id].shot_point_ids.data[point_iter].primary == best_shot_id
-				);
+		// 		bool point_found = false; 
+		// 		size_t point_iter = 0; 
+		// 		LAMBDA_FIND(vertices_incidence.data[vertex_id].shot_point_ids, point_iter, point_found, 
+		// 			vertices_incidence.data[vertex_id].shot_point_ids.data[point_iter].primary == best_shot_id
+		// 		);
 
-				// this vertex is visible on both shots
-				if (point_found && visible_vertices[vertex_id])
-				{
-					points1_id[count_manually_entered] = vertices_incidence.data[vertex_id].shot_point_ids.data[point_iter].secondary;
-					points2_id[count_manually_entered] = visible_vertices_point_id[vertex_id];
-					count_manually_entered++;
-				}
-			}
+		// 		// this vertex is visible on both shots
+		// 		if (point_found && visible_vertices[vertex_id])
+		// 		{
+		// 			points1_id[count_manually_entered] = vertices_incidence.data[vertex_id].shot_point_ids.data[point_iter].secondary;
+		// 			points2_id[count_manually_entered] = visible_vertices_point_id[vertex_id];
+		// 			count_manually_entered++;
+		// 		}
+		// 	}
 
-			// other correspondences
-			size_t count_tracked = 0;
-			CvMat * polygon_mat = publish_polygon(best_shot_id, best_polygon_id);
+		// 	// other correspondences
+		// 	size_t count_tracked = 0;
+		// 	CvMat * polygon_mat = publish_polygon(best_shot_id, best_polygon_id);
 
-			if (polygon_mat)
-			{
-				for ALL(shots.data[best_shot_id].points, j)
-				{
-					Point * point = shots.data[best_shot_id].points.data + j;
-					if (!visible_vertices[point->vertex] || polygon_vertices[point->vertex]) continue;
+		// 	if (polygon_mat)
+		// 	{
+		// 		for ALL(shots.data[best_shot_id].points, j)
+		// 		{
+		// 			Point * point = shots.data[best_shot_id].points.data + j;
+		// 			if (!visible_vertices[point->vertex] || polygon_vertices[point->vertex]) continue;
 
-					// this vertex is visible on both shots and it's inside the polygon
-					if (opencv_pip(point->x, point->y, polygon_mat))
-					{
-						points1_id[count_manually_entered + count_tracked] = j;
-						points2_id[count_manually_entered + count_tracked] = visible_vertices_point_id[point->vertex];
-						count_tracked++;
-					}
-				}
+		// 			// this vertex is visible on both shots and it's inside the polygon
+		// 			if (opencv_pip(point->x, point->y, polygon_mat))
+		// 			{
+		// 				points1_id[count_manually_entered + count_tracked] = j;
+		// 				points2_id[count_manually_entered + count_tracked] = visible_vertices_point_id[point->vertex];
+		// 				count_tracked++;
+		// 			}
+		// 		}
 
-				ATOMIC_RW(opencv, cvReleaseMat(&polygon_mat); );
-			}
+		// 		ATOMIC_RW(opencv, cvReleaseMat(&polygon_mat); );
+		// 	}
 
-			// estimate the homography 
-			if (count_manually_entered + count_tracked >= 4)
-			{
-				// use RANSAC
-				CvMat * points1;
-				CvMat * points2;
-				CvMat * H;
-				CvMat * best_H;
+		// 	// estimate the homography 
+		// 	if (count_manually_entered + count_tracked >= 4)
+		// 	{
+		// 		// use RANSAC
+		// 		CvMat * points1;
+		// 		CvMat * points2;
+		// 		CvMat * H;
+		// 		CvMat * best_H;
 
-				LOCK_RW(opencv) 
-				{
-					points1 = opencv_create_matrix(2, 4); 
-					points2 = opencv_create_matrix(2, 4);
-					H = opencv_create_matrix(3, 3);
-					best_H = opencv_create_matrix(3, 3);
-				}
-				UNLOCK_RW(opencv);
+		// 		LOCK_RW(opencv) 
+		// 		{
+		// 			points1 = opencv_create_matrix(2, 4); 
+		// 			points2 = opencv_create_matrix(2, 4);
+		// 			H = opencv_create_matrix(3, 3);
+		// 			best_H = opencv_create_matrix(3, 3);
+		// 		}
+		// 		UNLOCK_RW(opencv);
 
-				int inliers, best_inliers = -1;
+		// 		int inliers, best_inliers = -1;
 
-				for (size_t j = 0; j < count_manually_entered; j++) 
-				{
-					OPENCV_ELEM(points1, 0, j) = shots.data[best_shot_id].points.data[points1_id[j]].x; 
-					OPENCV_ELEM(points1, 1, j) = shots.data[best_shot_id].points.data[points1_id[j]].y; 
-					OPENCV_ELEM(points2, 0, j) = shots.data[ui_state.current_shot].points.data[points2_id[j]].x; 
-					OPENCV_ELEM(points2, 1, j) = shots.data[ui_state.current_shot].points.data[points2_id[j]].y; 
-				}
+		// 		for (size_t j = 0; j < count_manually_entered; j++) 
+		// 		{
+		// 			OPENCV_ELEM(points1, 0, j) = shots.data[best_shot_id].points.data[points1_id[j]].x; 
+		// 			OPENCV_ELEM(points1, 1, j) = shots.data[best_shot_id].points.data[points1_id[j]].y; 
+		// 			OPENCV_ELEM(points2, 0, j) = shots.data[ui_state.current_shot].points.data[points2_id[j]].x; 
+		// 			OPENCV_ELEM(points2, 1, j) = shots.data[ui_state.current_shot].points.data[points2_id[j]].y; 
+		// 		}
 
-				int trials = 0; 
-				while (trials++ < 60) 
-				{
-					if (count_manually_entered < 4) 
-					{
-						for (size_t j = count_manually_entered; j < (count_tracked + count_manually_entered) && j < 4; j++) 
-						{
-							int r = count_manually_entered + rand() % count_tracked;
-							OPENCV_ELEM(points1, 0, j) = shots.data[best_shot_id].points.data[points1_id[r]].x; 
-							OPENCV_ELEM(points1, 1, j) = shots.data[best_shot_id].points.data[points1_id[r]].y; 
-							OPENCV_ELEM(points2, 0, j) = shots.data[ui_state.current_shot].points.data[points2_id[r]].x; 
-							OPENCV_ELEM(points2, 1, j) = shots.data[ui_state.current_shot].points.data[points2_id[r]].y; 
-						}
-					}
+		// 		int trials = 0; 
+		// 		while (trials++ < 60) 
+		// 		{
+		// 			if (count_manually_entered < 4) 
+		// 			{
+		// 				for (size_t j = count_manually_entered; j < (count_tracked + count_manually_entered) && j < 4; j++) 
+		// 				{
+		// 					int r = count_manually_entered + rand() % count_tracked;
+		// 					OPENCV_ELEM(points1, 0, j) = shots.data[best_shot_id].points.data[points1_id[r]].x; 
+		// 					OPENCV_ELEM(points1, 1, j) = shots.data[best_shot_id].points.data[points1_id[r]].y; 
+		// 					OPENCV_ELEM(points2, 0, j) = shots.data[ui_state.current_shot].points.data[points2_id[r]].x; 
+		// 					OPENCV_ELEM(points2, 1, j) = shots.data[ui_state.current_shot].points.data[points2_id[r]].y; 
+		// 				}
+		// 			}
 
-					ATOMIC_RW(opencv, cvFindHomography(points1, points2, H); );
+		// 			ATOMIC_RW(opencv, cvFindHomography(points1, points2, H); );
 
-					// go through all points and count the number of inliers 
-					inliers = 0;
-					for (size_t n = 0; n < count_tracked + count_manually_entered; n++) 
-					{
-						// project the point 
-						const double w = 
-							OPENCV_ELEM(H, 2, 0) * shots.data[best_shot_id].points.data[points1_id[n]].x + 
-							OPENCV_ELEM(H, 2, 1) * shots.data[best_shot_id].points.data[points1_id[n]].y + 
-							OPENCV_ELEM(H, 2, 2);
+		// 			// go through all points and count the number of inliers 
+		// 			inliers = 0;
+		// 			for (size_t n = 0; n < count_tracked + count_manually_entered; n++) 
+		// 			{
+		// 				// project the point 
+		// 				const double w = 
+		// 					OPENCV_ELEM(H, 2, 0) * shots.data[best_shot_id].points.data[points1_id[n]].x + 
+		// 					OPENCV_ELEM(H, 2, 1) * shots.data[best_shot_id].points.data[points1_id[n]].y + 
+		// 					OPENCV_ELEM(H, 2, 2);
 
-						if (!nearly_zero(w))
-						{
-							const double 
-								x = (
-								OPENCV_ELEM(H, 0, 0) * shots.data[best_shot_id].points.data[points1_id[n]].x + 
-								OPENCV_ELEM(H, 0, 1) * shots.data[best_shot_id].points.data[points1_id[n]].y + 
-								OPENCV_ELEM(H, 0, 2)
-								) / w,
-								y = (
-								OPENCV_ELEM(H, 1, 0) * shots.data[best_shot_id].points.data[points1_id[n]].x +
-								OPENCV_ELEM(H, 1, 1) * shots.data[best_shot_id].points.data[points1_id[n]].y + 
-								OPENCV_ELEM(H, 1, 2)
-								) / w;
+		// 				if (!nearly_zero(w))
+		// 				{
+		// 					const double 
+		// 						x = (
+		// 						OPENCV_ELEM(H, 0, 0) * shots.data[best_shot_id].points.data[points1_id[n]].x + 
+		// 						OPENCV_ELEM(H, 0, 1) * shots.data[best_shot_id].points.data[points1_id[n]].y + 
+		// 						OPENCV_ELEM(H, 0, 2)
+		// 						) / w,
+		// 						y = (
+		// 						OPENCV_ELEM(H, 1, 0) * shots.data[best_shot_id].points.data[points1_id[n]].x +
+		// 						OPENCV_ELEM(H, 1, 1) * shots.data[best_shot_id].points.data[points1_id[n]].y + 
+		// 						OPENCV_ELEM(H, 1, 2)
+		// 						) / w;
 
-							const double 
-								dx = shots.data[ui_state.current_shot].width * (x - shots.data[ui_state.current_shot].points.data[points2_id[n]].x),
-								dy = shots.data[ui_state.current_shot].height * (y - shots.data[ui_state.current_shot].points.data[points2_id[n]].y);
-							const double er = dx * dx + dy * dy;
+		// 					const double 
+		// 						dx = shots.data[ui_state.current_shot].width * (x - shots.data[ui_state.current_shot].points.data[points2_id[n]].x),
+		// 						dy = shots.data[ui_state.current_shot].height * (y - shots.data[ui_state.current_shot].points.data[points2_id[n]].y);
+		// 					const double er = dx * dx + dy * dy;
 
-							if (sqrt(er) < 4)
-							{
-								// printf("[%f] ", sqrt(er));
-								inliers++;
-							}
-							else
-							{
-								// printf("{%f} ", sqrt(er));
-							}
-						}
-					}
+		// 					if (sqrt(er) < 4)
+		// 					{
+		// 						// printf("[%f] ", sqrt(er));
+		// 						inliers++;
+		// 					}
+		// 					else
+		// 					{
+		// 						// printf("{%f} ", sqrt(er));
+		// 					}
+		// 				}
+		// 			}
 
-					if (count_manually_entered >= 4)
-					{
-						ATOMIC_RW(opencv, cvCopy(H, best_H); );
-						best_inliers = inliers;
-						break;
-					}
+		// 			if (count_manually_entered >= 4)
+		// 			{
+		// 				ATOMIC_RW(opencv, cvCopy(H, best_H); );
+		// 				best_inliers = inliers;
+		// 				break;
+		// 			}
 
-					if (best_inliers == -1 || inliers > best_inliers)
-					{
-						best_inliers = inliers; 
-						ATOMIC_RW(opencv, cvCopy(H, best_H); );
-					}
-				}
+		// 			if (best_inliers == -1 || inliers > best_inliers)
+		// 			{
+		// 				best_inliers = inliers; 
+		// 				ATOMIC_RW(opencv, cvCopy(H, best_H); );
+		// 			}
+		// 		}
 
-				// if there is big enough support set
-				// printf("inliers: %d\n", best_inliers);
-				if (best_inliers >= 8)
-				{
-					ATOMIC_RW(opencv, cvCopy(best_H, H); );
+		// 		// if there is big enough support set
+		// 		// printf("inliers: %d\n", best_inliers);
+		// 		if (best_inliers >= 8)
+		// 		{
+		// 			ATOMIC_RW(opencv, cvCopy(best_H, H); );
 
-					// now save estimated points 
-					for ALL(polygons.data[best_polygon_id].vertices, i)
-					{
-						const size_t vertex_id = polygons.data[best_polygon_id].vertices.data[i].value;
+		// 			// now save estimated points 
+		// 			for ALL(polygons.data[best_polygon_id].vertices, i)
+		// 			{
+		// 				const size_t vertex_id = polygons.data[best_polygon_id].vertices.data[i].value;
 
-						// skip vertices already visible on destination shot 
-						if (visible_vertices[vertex_id]) continue;
+		// 				// skip vertices already visible on destination shot 
+		// 				if (visible_vertices[vertex_id]) continue;
 
-						bool point_found = false; 
-						size_t point_iter = 0; 
-						LAMBDA_FIND(
-							vertices_incidence.data[vertex_id].shot_point_ids, point_iter, point_found,
-							vertices_incidence.data[vertex_id].shot_point_ids.data[point_iter].primary == best_shot_id
-						);
+		// 				bool point_found = false; 
+		// 				size_t point_iter = 0; 
+		// 				LAMBDA_FIND(
+		// 					vertices_incidence.data[vertex_id].shot_point_ids, point_iter, point_found,
+		// 					vertices_incidence.data[vertex_id].shot_point_ids.data[point_iter].primary == best_shot_id
+		// 				);
 
-						const size_t point_id = vertices_incidence.data[vertex_id].shot_point_ids.data[point_iter].secondary;
-						const Shot * shot = shots.data + best_shot_id;
+		// 				const size_t point_id = vertices_incidence.data[vertex_id].shot_point_ids.data[point_iter].secondary;
+		// 				const Shot * shot = shots.data + best_shot_id;
 
-						// transform this point using computed homography 
-						const double w = 
-							OPENCV_ELEM(H, 2, 0) * shot->points.data[point_id].x + 
-							OPENCV_ELEM(H, 2, 1) * shot->points.data[point_id].y + 
-							OPENCV_ELEM(H, 2, 2);
+		// 				// transform this point using computed homography 
+		// 				const double w = 
+		// 					OPENCV_ELEM(H, 2, 0) * shot->points.data[point_id].x + 
+		// 					OPENCV_ELEM(H, 2, 1) * shot->points.data[point_id].y + 
+		// 					OPENCV_ELEM(H, 2, 2);
 
-						if (!nearly_zero(w)) 
-						{
-							const double 
-								x = (
-								OPENCV_ELEM(H, 0, 0) * shot->points.data[point_id].x + 
-								OPENCV_ELEM(H, 0, 1) * shot->points.data[point_id].y + 
-								OPENCV_ELEM(H, 0, 2)
-								) / w,
-								y = (
-								OPENCV_ELEM(H, 1, 0) * shot->points.data[point_id].x + 
-								OPENCV_ELEM(H, 1, 1) * shot->points.data[point_id].y + 
-								OPENCV_ELEM(H, 1, 2)
-								) / w;
+		// 				if (!nearly_zero(w)) 
+		// 				{
+		// 					const double 
+		// 						x = (
+		// 						OPENCV_ELEM(H, 0, 0) * shot->points.data[point_id].x + 
+		// 						OPENCV_ELEM(H, 0, 1) * shot->points.data[point_id].y + 
+		// 						OPENCV_ELEM(H, 0, 2)
+		// 						) / w,
+		// 						y = (
+		// 						OPENCV_ELEM(H, 1, 0) * shot->points.data[point_id].x + 
+		// 						OPENCV_ELEM(H, 1, 1) * shot->points.data[point_id].y + 
+		// 						OPENCV_ELEM(H, 1, 2)
+		// 						) / w;
 
-							size_t new_point_id;
-							geometry_new_point(new_point_id, x, y, ui_state.current_shot, vertex_id);
-						}
-					}
-				}
+		// 					size_t new_point_id;
+		// 					geometry_new_point(new_point_id, x, y, ui_state.current_shot, vertex_id);
+		// 				}
+		// 			}
+		// 		}
 
-				// release resources
-				LOCK_RW(opencv)
-				{
-					cvReleaseMat(&points1);
-					cvReleaseMat(&points2);
-					cvReleaseMat(&H);
-					cvReleaseMat(&best_H);
-				}
-				UNLOCK_RW(opencv);
-			}
+		// 		// release resources
+		// 		LOCK_RW(opencv)
+		// 		{
+		// 			cvReleaseMat(&points1);
+		// 			cvReleaseMat(&points2);
+		// 			cvReleaseMat(&H);
+		// 			cvReleaseMat(&best_H);
+		// 		}
+		// 		UNLOCK_RW(opencv);
+		// 	}
 
-			FREE(points1_id);
-			FREE(points2_id);
+		// 	FREE(points1_id);
+		// 	FREE(points2_id);
 
-			/*printf("Best polygon is %d on shot %d with %d features.\n", best_polygon_id, best_shot_id, best_points_count);
-			printf("There are %d correspondences from user and %d tracked.\n", count_manually_entered, count_tracked);*/
-		}
-		else
-		{
-			printf("No suitable polygon found.\n");
-		}
+		// 	/*printf("Best polygon is %d on shot %d with %d features.\n", best_polygon_id, best_shot_id, best_points_count);
+		// 	printf("There are %d correspondences from user and %d tracked.\n", count_manually_entered, count_tracked);*/
+		// }
+		// else
+		// {
+		// 	printf("No suitable polygon found.\n");
+		// }
 
-		FREE(visible_vertices);
-		FREE(visible_vertices_point_id);
+		// FREE(visible_vertices);
+		// FREE(visible_vertices_point_id);
 
-		ui_workflow_first_vertex();
-		INDEX_CLEAR(ui_state.processed_polygon);
-		ui_state.key_state[SDLK_SPACE] = false;
+		// ui_workflow_first_vertex();
+		// INDEX_CLEAR(ui_state.processed_polygon);
+		// ui_state.key_state[SDLK_SPACE] = false;
 	}
 }
 

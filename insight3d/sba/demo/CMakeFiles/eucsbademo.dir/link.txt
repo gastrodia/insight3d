@@ -1,0 +1,1 @@
+/usr/bin/cc     CMakeFiles/eucsbademo.dir/eucsbademo.o CMakeFiles/eucsbademo.dir/imgproj.o CMakeFiles/eucsbademo.dir/readparams.o  -o eucsbademo  -L..  -L/home/allay/software/sba-1.6 -rdynamic ../libsba.a -llapack -lblas -lf2c -Wl,-rpath,.. 

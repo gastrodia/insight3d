@@ -1,6 +1,8 @@
 #include "cv_extensions.h"
 #define CV_VERYSMALLDOUBLE 1.0e-10
+#include <opencv2/opencv.hpp>
 
+using namespace cv;
 void cvComputeRQDecomposition(CvMat *matrixM, CvMat *matrixR, CvMat *matrixQ, CvMat *matrixQx, CvMat *matrixQy, CvMat *matrixQz, CvPoint3D64f *eulerAngles)
 {
 	
@@ -15,7 +17,7 @@ void cvComputeRQDecomposition(CvMat *matrixM, CvMat *matrixR, CvMat *matrixQ, Cv
 	double tmpEulerAngleX, tmpEulerAngleY, tmpEulerAngleZ;
 	
 	CV_FUNCNAME("cvRQDecomp3x3");
-    __BEGIN__;
+    //__BEGIN__;
 	
 	/* Validate parameters. */
 	if(matrixM == 0 || matrixR == 0 || matrixQ == 0)
@@ -194,7 +196,7 @@ void cvComputeRQDecomposition(CvMat *matrixM, CvMat *matrixR, CvMat *matrixQ, Cv
 	if(eulerAngles)
 		*eulerAngles = cvPoint3D64f(tmpEulerAngleX, tmpEulerAngleY, tmpEulerAngleZ);
 	
-	__END__;
+	//__END__;
 	
 	cvReleaseMat(&tmpMatrix1);
 	cvReleaseMat(&tmpMatrix2);

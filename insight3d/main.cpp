@@ -24,8 +24,8 @@
 
 #include "application.h"
 
-FILE _iob[] = { *stdin, *stdout, *stderr };
-extern "C" FILE * __cdecl __iob_func(void) { return _iob; }
+// FILE _iob[] = { *stdin, *stdout, *stderr };
+// extern "C" FILE * __cdecl __iob_func(void) { return _iob; }
 
 int main(int argc, char* argv[])
 {
